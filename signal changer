@@ -1,0 +1,184 @@
+# OpenCV Python program to detect cars in video frame 
+# import libraries of python OpenCV  
+import cv2 
+import numpy as np
+import time
+import random as rd
+import RPi.GPIO as GPIO
+  
+# capture frames from a video 
+cap = cv2.VideoCapture("/home/pi/secured/hackyy/vidsrc.mp4") 
+cap2= cv2.VideoCapture("/home/pi/secured/hackyy/vidsrc.mp4")
+cap3= cv2.VideoCapture("/home/pi/secured/hackyy/vidsrc.mp4")
+cap4= cv2.VideoCapture("/home/pi/secured/hackyy/vidsrc.mp4")
+ 
+ 
+GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
+ledpin=[8,12,16,22]
+GPIO.setup(ledpin[0],GPIO.OUT)
+GPIO.setup(ledpin[1],GPIO.OUT)
+GPIO.setup(ledpin[2],GPIO.OUT)
+GPIO.setup(ledpin[3],GPIO.OUT)
+ 
+ 
+# Trained XML classifiers describes some features of some object we want to detect 
+car_cascade = cv2.CascadeClassifier('/home/pi/secured/hackyy/cars.xml') 
+ 
+ncars=[0,0,0,0]
+twt=[rd.randint(2,120) for i in range(4)]
+l=[1,0,0,0]
+ 
+# loop runs if capturing has been initialized. 
+while True: 
+    # reads frames from a video 
+    ret, frames = cap.read() 
+    ret2,frames2=cap2.read()
+    ret3,frames3=cap3.read()
+    ret4,frames4=cap4.read()
+    
+    # convert to gray scale of each frames 
+    gray = cv2.cvtColor(frames, cv2.COLOR_BGR2GRAY) 
+    gray2 = cv2.cvtColor(frames2, cv2.COLOR_BGR2GRAY) 
+    gray3 = cv2.cvtColor(frames3, cv2.COLOR_BGR2GRAY) 
+    gray4 = cv2.cvtColor(frames4, cv2.COLOR_BGR2GRAY) 
+      
+  
+    # Detects cars of different sizes in the input image 
+    cars = car_cascade.detectMultiScale(gray, 1.1, 1) 
+    cars2 = car_cascade.detectMultiScale(gray2, 1.1, 1) 
+    cars3 = car_cascade.detectMultiScale(gray3, 1.1, 1) 
+    cars4 = car_cascade.detectMultiScale(gray4, 1.1, 1) 
+    ncars[0]=len(cars)
+    ncars[1]-len(cars2)
+    ncars[2]-len(cars3)
+    ncars[3]-len(cars4) 
+    # To draw a rectangle in each cars 
+    for (x,y,w,h) in cars: 
+        cv2.rectangle(frames,(x,y),(x+w,y+h),(0,0,255),2)
+        cv2.rectangle(frames2,(x,y),(x+w,y+h),(0,0,255),2)
+        cv2.rectangle(frames3,(x,y),(x+w,y+h),(0,0,255),2)
+        cv2.rectangle(frames4,(x,y),(x+w,y+h),(0,0,255),2)
+ 
+        font = cv2.FONT_HERSHEY_SIMPLEX 
+  
+        # org 
+        org = (50, 50) 
+  
+        # fontScale 
+        fontScale = 1
+   
+        # Blue color in BGR 
+        color = (255, 0, 0) 
+  
+        # Line thickness of 2 px 
+        thickness = 2
+   
+        # Using cv2.putText() method 
+        frames = cv2.putText(frames, str(len(cars)), org, font,  
+                   fontScale, color, thickness, cv2.LINE_AA)
+        frames2 = cv2.putText(frames2, str(len(cars2)), org, font,  
+                   fontScale, color, thickness, cv2.LINE_AA)
+        frames3 = cv2.putText(frames3, str(len(cars3)), org, font,  
+                   fontScale, color, thickness, cv2.LINE_AA)
+        frames4 = cv2.putText(frames4, str(len(cars4)), org, font,  
+                   fontScale, color, thickness, cv2.LINE_AA)
+        
+        #bothh1 = np.concatenate((frames, frames2), axis=1)
+        #bothh2= np.concatenate((frames3, frames4), axis=1)
+        #final = np.concatenate((bothh1, bothh2), axis=2)
+        
+        top = np.hstack((frames, frames2))
+        bottom = np.hstack((frames3,frames4))
+        result = np.vstack((top, bottom))
+        
+        cv2.imshow('frames', result)
+        #cv2.imshow('frames2', frames2)
+        #cv2.imshow('frames3', frames3)
+        #cv2.imshow('frames4', frames4)
+        twt[0]+=1
+        twt[1]+=1
+        twt[2]+=1
+        twt[3]+=1
+        if(max(twt)<30):
+            continue
+        
+        if(max(ncars)>20):
+              if (max(twt)>120):
+                  if(twt[ncars.index(max(ncars))]<max(twt)):
+                    l=[0 for i in range(len(twt))]
+                    l[twt.index(max(twt))]=1
+                    k=twt.index(max(twt))
+                    ncars[twt.index(max(twt))]=0
+                    twt[twt.index(max(twt))]=0
+                    GPIO.output(ledpin[0],GPIO.LOW)
+                    GPIO.output(ledpin[1],GPIO.LOW)
+                    GPIO.output(ledpin[2],GPIO.LOW)
+                    GPIO.output(ledpin[3],GPIO.LOW)
+                    GPIO.output(ledpin[twt.index(max(twt))],GPIO.HIGH)
+                    #print(1)
+                  else:
+                    l=[0 for i in range(len(twt))]
+                    l[ncars.index(max(ncars))]=1
+                    k=ncars.index(max(ncars))
+                    twt[ncars.index(max(ncars))]=0
+                    ncars[ncars.index(max(ncars))]=0
+                    GPIO.output(ledpin[0],GPIO.LOW)
+                    GPIO.output(ledpin[1],GPIO.LOW)
+                    GPIO.output(ledpin[2],GPIO.LOW)
+                    GPIO.output(ledpin[3],GPIO.LOW)
+                    GPIO.output(ledpin[ncars.index(max(ncars))],GPIO.HIGH)
+                    #print(2)
+              else:
+                  if(twt[ncars.index(max(ncars))]<=max(twt)):
+                    l=[0 for i in range(len(twt))]
+                    l[twt.index(max(twt))]=1
+                    k=twt.index(max(twt))
+                    ncars[twt.index(max(twt))]=0
+                    twt[twt.index(max(twt))]=0
+                    GPIO.output(ledpin[0],GPIO.LOW)
+                    GPIO.output(ledpin[1],GPIO.LOW)
+                    GPIO.output(ledpin[2],GPIO.LOW)
+                    GPIO.output(ledpin[3],GPIO.LOW)
+                    GPIO.output(ledpin[twt.index(max(twt))],GPIO.HIGH)
+                    #print(3)
+                  else:
+                    l=[0 for i in range(len(twt))]
+                    l[ncars.index(max(ncars))]=1
+                    k=ncars.index(max(ncars))
+                    twt[ncars.index(max(ncars))]=0
+                    ncars[ncars.index(max(ncars))]=0
+                    GPIO.output(ledpin[0],GPIO.LOW)
+                    GPIO.output(ledpin[1],GPIO.LOW)
+                    GPIO.output(ledpin[2],GPIO.LOW)
+                    GPIO.output(ledpin[3],GPIO.LOW)
+                    GPIO.output(ledpin[ncars.index(max(ncars))],GPIO.HIGH)
+                    #print(4)
+        else:
+              if(max(twt)>60):
+                  l=[0 for i in range(len(twt))]
+                  l[twt.index(max(twt))]=1
+                  k=twt.index(max(twt))
+                  ncars[twt.index(max(twt))]=0
+                  twt[twt.index(max(twt))]=0
+                  GPIO.output(ledpin[0],GPIO.LOW)
+                  GPIO.output(ledpin[1],GPIO.LOW)
+                  GPIO.output(ledpin[2],GPIO.LOW)
+                  GPIO.output(ledpin[3],GPIO.LOW)
+                  GPIO.output(ledpin[twt.index(max(twt))],GPIO.HIGH)
+              #print(5)
+ 
+        print(ncars,"          ",twt,"           ",l)
+        
+ 
+    #print(ncars,"          ",twt,"           ",l)
+        #time.sleep(10)            
+ 
+        
+ 
+ 
+        if cv2.waitKey(33) == 27: 
+          break
+        
+        
+cv2.destroyAllWindows()
